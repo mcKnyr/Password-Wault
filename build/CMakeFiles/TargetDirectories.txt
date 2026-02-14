@@ -1,3 +1,0 @@
-/home/dimas/cppProjects/Simple Password Wault/build/CMakeFiles/pass_manager.dir
-/home/dimas/cppProjects/Simple Password Wault/build/CMakeFiles/edit_cache.dir
-/home/dimas/cppProjects/Simple Password Wault/build/CMakeFiles/rebuild_cache.dir

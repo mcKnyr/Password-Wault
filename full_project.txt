@@ -22,6 +22,7 @@ SOURCE FILE: include/PasswordEntry.hpp
 
 #include <string>
 #include "ICipher.hpp"
+#include <XorCipher.hpp>
 
 class PasswordEntry{
 private:
@@ -36,6 +37,12 @@ public:
         const std::string& password, 
         const std::string& master_key, 
         const ICipher& cipher
+    );
+
+    PasswordEntry(
+        const std::string& service_name, 
+        const std::string& login, 
+        const std::string& encrypted_password
     );
 
 	void display() const;
@@ -80,6 +87,7 @@ public:
     const PasswordEntry* findEntry(const std::string& service) const;
 
     void saveToFile(const std::string& filename) const;
+    void loadFromFile(const std::string& filename);
     
 };
 
@@ -88,6 +96,8 @@ public:
 ----------------------------------------
 SOURCE FILE: include/XorCipher.hpp
 ----------------------------------------
+#pragma once
+
 #include "ICipher.hpp"
 
 class XorCipher : public ICipher{
@@ -104,6 +114,7 @@ class XorCipher : public ICipher{
 SOURCE FILE: source/PasswordEntry.cpp
 ----------------------------------------
 #include "PasswordEntry.hpp"
+#include <XorCipher.hpp>
 #include <stdexcept>
 #include <iostream>
 
@@ -124,6 +135,23 @@ PasswordEntry::PasswordEntry(
     this->service_name = service_name;
     this->login = login;
     this->password = cipher.encrypt(password, master_key); 
+}
+
+PasswordEntry::PasswordEntry(
+    const std::string &service_name, 
+    const std::string &login, 
+    const std::string &encrypted_password
+) {
+    if(service_name.empty())
+        throw std::invalid_argument("Service name is empty");
+    if(login.empty())
+        throw std::invalid_argument("Login is empty");
+    if(encrypted_password.empty())
+        throw std::invalid_argument("Encrypted password is empty");
+    
+    this->service_name = service_name;
+    this->login = login;
+    this->password = encrypted_password;
 }
 
 void PasswordEntry::display() const{
@@ -206,6 +234,28 @@ void Vault::saveToFile(const std::string& filename) const{
     file.close();
 }
 
+void Vault::loadFromFile(const std::string& filename) {
+    std::ifstream file(filename);
+
+    if (!file.is_open()) 
+        return; // If the file doesn't exist, we simply return without throwing an error
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        size_t pos1 = line.find('|');
+        size_t pos2 = line.find('|', pos1 + 1);
+
+        if(pos1 == std::string::npos || pos2 == std::string::npos) 
+            continue; // Skip malformed lines
+
+        std::string service = line.substr(0, pos1);
+        std::string login = line.substr(pos1 + 1, pos2 - pos1 - 1);
+        std::string encrypted_password = line.substr(pos2 + 1);
+        entries.emplace_back(service, login, encrypted_password);
+    }
+}
+
+
 
 
 ----------------------------------------
@@ -275,40 +325,51 @@ SOURCE FILE: source/main.cpp
 #include "XorCipher.hpp"
 #include "Vault.hpp"
 
-int main() {
-    try {
-        std::string master = "top-secret-key";
-        
-        // Создаем хранилище и отдаем ему XOR шифратор
-        auto cipher = std::make_unique<XorCipher>();
-        Vault myVault(std::move(cipher));
+std::string master = "top-secret-key";
 
-        // Добавляем записи
-        myVault.addEntry("Github", "alex_dev", "p@ss123", master);
-        myVault.addEntry("Google", "alex.work", "work_only_55", master);
+void saveTest() {
+    auto cipher = std::make_unique<XorCipher>();
+    Vault vault(std::move(cipher));
 
-        std::cout << "--- Password Manager Ready ---" << std::endl;
-        
-        // Поиск
-        std::string query = "Github";
-        const PasswordEntry* found = myVault.findEntry(query);
+    vault.addEntry("Github", "alex_dev", "p@ss123", master);
+    vault.addEntry("Google", "alex.work", "work_only_55", master);
+    vault.addEntry("Facebook", "alex.fb", "fb_pass_2024", master);
 
-        if (found) {
-            std::cout << "Found entry for: " << query << std::endl;
-            found->display(); // Покажет звездочки
+    vault.saveToFile("data.db");
+}
 
-            // Для расшифровки нам нужен доступ к алгоритму
-            XorCipher x; 
-            std::cout << "Decrypted password: " 
-                      << found->getDecryptedPassword(x, master) << std::endl;
-        } else {
-            std::cout << "Service " << query << " not found." << std::endl;
-        }
+void loadTest() {
+    auto cipher = std::make_unique<XorCipher>();
+    Vault vault(std::move(cipher));
 
-    } catch (const std::exception& e) {
-        std::cerr << "Critical Error: " << e.what() << std::endl;
+    vault.loadFromFile("data.db");
+
+    std::string query = "Google";
+    const PasswordEntry* found = vault.findEntry(query);
+
+    if (found) {
+        std::cout << "Found entry for: " << query << std::endl;
+        found->display(); // Покажет звездочки
+
+        XorCipher x; 
+        std::cout << "Decrypted password: " 
+                  << found->getDecryptedPassword(x, master) << std::endl;
+    } else {
+        std::cout << "Service " << query << " not found." << std::endl;
     }
+}
 
+int main() {
+    char c; std::cin >> c;
+    if(c == 's') {
+        saveTest();
+    } else if(c == 'l') {
+        loadTest();
+    } else {
+        std::cout << "Invalid option. Use 's' for save test or 'l' for load test." << std::endl;
+    }
+    
+    
     return 0;
 }
 

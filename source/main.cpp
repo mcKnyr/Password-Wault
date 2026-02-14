@@ -4,39 +4,50 @@
 #include "XorCipher.hpp"
 #include "Vault.hpp"
 
-int main() {
-    try {
-        std::string master = "top-secret-key";
-        
-        // Создаем хранилище и отдаем ему XOR шифратор
-        auto cipher = std::make_unique<XorCipher>();
-        Vault myVault(std::move(cipher));
+std::string master = "top-secret-key";
 
-        // Добавляем записи
-        myVault.addEntry("Github", "alex_dev", "p@ss123", master);
-        myVault.addEntry("Google", "alex.work", "work_only_55", master);
+void saveTest() {
+    auto cipher = std::make_unique<XorCipher>();
+    Vault vault(std::move(cipher));
 
-        std::cout << "--- Password Manager Ready ---" << std::endl;
-        
-        // Поиск
-        std::string query = "Github";
-        const PasswordEntry* found = myVault.findEntry(query);
+    vault.addEntry("Github", "alex_dev", "p@ss123", master);
+    vault.addEntry("Google", "alex.work", "work_only_55", master);
+    vault.addEntry("Facebook", "alex.fb", "fb_pass_2024", master);
 
-        if (found) {
-            std::cout << "Found entry for: " << query << std::endl;
-            found->display(); // Покажет звездочки
+    vault.saveToFile("data.db");
+}
 
-            // Для расшифровки нам нужен доступ к алгоритму
-            XorCipher x; 
-            std::cout << "Decrypted password: " 
-                      << found->getDecryptedPassword(x, master) << std::endl;
-        } else {
-            std::cout << "Service " << query << " not found." << std::endl;
-        }
+void loadTest() {
+    auto cipher = std::make_unique<XorCipher>();
+    Vault vault(std::move(cipher));
 
-    } catch (const std::exception& e) {
-        std::cerr << "Critical Error: " << e.what() << std::endl;
+    vault.loadFromFile("data.db");
+
+    std::string query = "Google";
+    const PasswordEntry* found = vault.findEntry(query);
+
+    if (found) {
+        std::cout << "Found entry for: " << query << std::endl;
+        found->display(); // Покажет звездочки
+
+        XorCipher x; 
+        std::cout << "Decrypted password: " 
+                  << found->getDecryptedPassword(x, master) << std::endl;
+    } else {
+        std::cout << "Service " << query << " not found." << std::endl;
     }
+}
 
+int main() {
+    char c; std::cin >> c;
+    if(c == 's') {
+        saveTest();
+    } else if(c == 'l') {
+        loadTest();
+    } else {
+        std::cout << "Invalid option. Use 's' for save test or 'l' for load test." << std::endl;
+    }
+    
+    
     return 0;
 }

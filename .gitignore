@@ -15,15 +15,16 @@ build/
 #*.out
 
 # Локальные базы данных с паролями (ВАЖНО!)
-#*.db
+*.db
 #*.txt
 #!README.txt
 
 # Настройки редакторов
-#.vscode/
+.vscode/
 .idea/
-#.vs/
-#*.swp
+.vs/
+*.swp
+*.swo
 
 #merge_cpp.sh
 #full_project.txt

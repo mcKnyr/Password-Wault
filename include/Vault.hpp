@@ -23,5 +23,6 @@ public:
     const PasswordEntry* findEntry(const std::string& service) const;
 
     void saveToFile(const std::string& filename) const;
+    void loadFromFile(const std::string& filename);
     
 };

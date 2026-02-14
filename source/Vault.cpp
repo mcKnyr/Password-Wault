@@ -55,3 +55,27 @@ void Vault::saveToFile(const std::string& filename) const{
 
     file.close();
 }
+
+void Vault::loadFromFile(const std::string& filename) {
+    std::ifstream file(filename);
+
+    if (!file.is_open()) 
+        return; // If the file doesn't exist, we simply return without throwing an error
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        size_t pos1 = line.find('|');
+        size_t pos2 = line.find('|', pos1 + 1);
+
+        if(pos1 == std::string::npos || pos2 == std::string::npos) 
+            continue; // Skip malformed lines
+
+        auto xor_ptr = dynamic_cast<XorCipher*>(cipher.get());
+
+        std::string service = line.substr(0, pos1);
+        std::string login = line.substr(pos1 + 1, pos2 - pos1 - 1);
+        std::string encrypted_password = xor_ptr->fromHex(line.substr(pos2 + 1));
+        entries.emplace_back(service, login, encrypted_password);
+    }
+}
+
